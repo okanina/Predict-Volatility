@@ -1,6 +1,6 @@
 #libraries
 import requests
-import config
+import config, random
 import sqlite3
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -8,23 +8,8 @@ import pandas as pd
 class AlphaVantageAPI:
 
     def __init__(self, api_key=config.api_key):
-        self.__api_key=api_key
-
-
-    def get_symbols(self):
-    
-        url="https://companiesmarketcap.com/south-africa/largest-companies-in-south-africa-by-market-cap/"
-
-        headers={    
-            "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
-            }
-
-        response=requests.get(url, headers=headers)
-
-        soup=BeautifulSoup(response.text, "html.parser")
-        ticker_list=[ticker.text for ticker in soup.select("div.company-code")]
-    
-        return ticker_list
+        self.__api_key=api_key 
+   
 
     def get_daily(self, ticker, output_size="full"):
 
@@ -88,17 +73,11 @@ def main():
     av=AlphaVantageAPI()    
     connection=sqlite3.connect(config.db_name)
     repo=SQLRepository(connection=connection)
-
-    # Getting data for 5 companies
-    ticker_symbols=av.get_symbols()[:5]
-    print(ticker_symbols)   
-    for ticker in ticker_symbols:
-        try:    
-            df=av.get_daily(ticker)
-            report=repo.insert_df(table_name=ticker, records=df)
-            print(report)
-        except Exception:
-            pass
-if __name__=="__data__":
+    tickers=["CPI", "MTNOY"]
+    for ticker in tickers:
+        df=av.get_daily(ticker)
+        report=repo.insert_df(table_name=ticker, records=df)  
+        
+if __name__=="__main__":
        main()
 

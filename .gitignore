@@ -1,3 +1,5 @@
 .env
 __pycache__
 .pynb_checkpoints
+Model deployment.ipynb
+stockdb.sqlite

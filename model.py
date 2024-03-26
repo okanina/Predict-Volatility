@@ -1,26 +1,26 @@
 import pandas as pd
 import numpy as np
-import os, config, dill, sqlite3
+import os, config, joblib, sqlite3
 from glob import glob
 from arch import arch_model
 from data import AlphaVantageAPI, SQLRepository
 
 class GarchModel:
     def __init__(self, ticker, repo, use_new_data=False):
-        self.ticker=ticker,
+        self.ticker=ticker
         self.repo=repo
         self.use_new_data=use_new_data
         self.model_directory=config.model_directory
 
-    def wrangle(self, ticker, n_observations):
+    def wrangle(self, n_observations):
         '''This method extract table data from the database and calculate returns'''
 
         if self.use_new_data:
             api=AlphaVantageAPI()
-            new_data=api.get_dailty(ticker=self.ticker)
-            self.repo.insert_table(self.ticker, records=new_data, if_exists="replace")
+            new_data=api.get_daily(ticker=self.ticker)
+            self.repo.insert_df(self.ticker, records=new_data, if_exists="replace")
 
-        df=self.repo.read_table(ticker, limit = n_observations+1)
+        df=self.repo.read_table(self.ticker, limit = n_observations+1)
 
         df.sort_index(ascending=True, inplace=True)
 
@@ -32,11 +32,11 @@ class GarchModel:
 
         '''This method fit the modl to data and calculate variance'''
 
-        self.model=arch_model(self.data, p, q).fit(disp=0)
+        self.model=arch_model(self.data, p=p, q=q, rescale=False).fit(disp=0)
         self.aic=self.model.aic
         self.bic=self.model.bic
 
-    def __clean_prediction(self, predictions):
+    def __clean_predictions(self, predictions):
         
         start_date=predictions.index[0] + pd.DateOffset(days=1)
 
@@ -50,11 +50,11 @@ class GarchModel:
 
         prediction_index=pd.Series(data, prediction_index)
 
-        return prediction_index
+        return prediction_index.to_dict()
          
     def predict_volatility(self, horizon):
 
-        prediction=self.model.forecast(horizon=horizon, reindex=False).variance
+        prediction=self.model.forecast(horizon=horizon, reindex=False).variance**0.5
 
         predict_formatted=self.__clean_predictions(prediction)
 
@@ -63,10 +63,18 @@ class GarchModel:
     def dump(self):
         '''saving model to self.model.directory'''
 
-        timestamp=pd.Timestamp.now().isoformat()
+        # creating a directory
+        os.makedirs(self.model_directory, exist_ok=True)
+
+        timestamp=pd.Timestamp.now().isoformat()       
 
         filepath=os.path.join(self.model_directory, f"{timestamp}_{self.ticker}.pkl")
-        dill.dump(self.model, filepath)
+
+        #removing special characters
+        filepath=filepath.replace(":", ".")
+
+        with open(filepath, "wb") as file_obj:
+            joblib.dump(self.model, file_obj)
 
         return filepath
 
@@ -78,9 +86,11 @@ class GarchModel:
         try:
             model_path=sorted(glob(pattern))[-1]
         except IndexError:
-            raise Exception(f"No file with {self.ticke} found.")
+            raise Exception(f"No file with {self.ticker} found.")
         
-        self.model = dill.load(model_path)
+        #load model
+        self.model = joblib.load(model_path)
+        print(self.model)
 
 
 

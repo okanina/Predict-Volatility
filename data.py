@@ -1,8 +1,6 @@
 #libraries
 import requests
-import config, random
-import sqlite3
-from bs4 import BeautifulSoup
+import config
 import pandas as pd
 
 class AlphaVantageAPI:
@@ -23,10 +21,10 @@ class AlphaVantageAPI:
         response=requests.get(url)
 
         response_data=response.json()
-
+        
         
         if "Time Series (Daily)" not in response_data.keys():
-            raise Exception(f"Invalid API call. Check that the '{ticker}' is correct.")
+            raise Exception(f"Invalid API call. Check that the '{ticker}' is correct.")           
                         
 
         df=pd.DataFrame().from_dict(response_data["Time Series (Daily)"], orient="index", dtype=float) # keys to indx   
@@ -68,16 +66,16 @@ class SQLRepository:
         return df 
 
 
-def main():
+# def main():
 
-    av=AlphaVantageAPI()    
-    connection=sqlite3.connect(config.db_name)
-    repo=SQLRepository(connection=connection)
-    tickers=["CPI", "MTNOY"]
-    for ticker in tickers:
-        df=av.get_daily(ticker)
-        report=repo.insert_df(table_name=ticker, records=df)  
+#     av=AlphaVantageAPI()    
+#     connection=sqlite3.connect(config.db_name)
+#     repo=SQLRepository(connection=connection)
+#     tickers=["CPI", "MTNOY"]
+#     for ticker in tickers:
+#         df=av.get_daily(ticker)
+#         report=repo.insert_df(table_name=ticker, records=df)  
         
-if __name__=="__main__":
-       main()
+# if __name__=="__main__":
+#        main()
 
